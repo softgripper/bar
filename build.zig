@@ -36,8 +36,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.linkLibC(); // This line is crucial
-    exe.addLibraryPath(b.path("SDL3/SDL3.lib"));
+    exe.linkLibC();
+    exe.addLibraryPath(b.path("SDL3"));
     exe.addObjectFile(b.path("SDL3/SDL3.lib"));
     exe.addIncludePath(b.path("SDL3/include"));
     b.installBinFile("SDL3/SDL3.dll", "SDL3.dll");
