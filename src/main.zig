@@ -1,16 +1,8 @@
 const std = @import("std");
+
 const c = @cImport({
-    @cInclude("SDL2/SDL.h");
+    @cInclude("SDL3/SDL.h");
 });
-
-const print = std.debug.print;
-
-const Dorf = struct {
-    name: []const u8,
-    pub fn greet(self: *const Dorf, other: Dorf) void {
-        print("{s} greets {s}\n", .{ self.name, other.name });
-    }
-};
 
 pub fn main() !void {
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
@@ -27,27 +19,20 @@ pub fn main() !void {
 
     try bw.flush(); // don't forget to flush!
 
-    const ned = Dorf{ .name = "Ned" };
-    const chief = Dorf{ .name = "Chief" };
-
-    ned.greet(chief);
-    chief.greet(ned);
-    print("{d}", .{@sizeOf(Dorf)});
-
-    if (c.SDL_Init(c.SDL_INIT_VIDEO) != 0) {
+    if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
         c.SDL_Log("Unable to initialize SDL: %s", c.SDL_GetError());
         return error.SDLInitializationFailed;
     }
     defer c.SDL_Quit();
 
-    const screen = c.SDL_CreateWindow("My Game Window", c.SDL_WINDOWPOS_UNDEFINED, c.SDL_WINDOWPOS_UNDEFINED, 400, 140, c.SDL_WINDOW_OPENGL) orelse
+    const screen = c.SDL_CreateWindow("My Game Window", 640, 480, c.SDL_WINDOW_VULKAN) orelse
         {
         c.SDL_Log("Unable to create window: %s", c.SDL_GetError());
         return error.SDLInitializationFailed;
     };
     defer c.SDL_DestroyWindow(screen);
 
-    const renderer = c.SDL_CreateRenderer(screen, -1, 0) orelse {
+    const renderer = c.SDL_CreateRenderer(screen, null) orelse {
         c.SDL_Log("Unable to create renderer: %s", c.SDL_GetError());
         return error.SDLInitializationFailed;
     };
@@ -57,9 +42,9 @@ pub fn main() !void {
 
     while (!quit) {
         var event: c.SDL_Event = undefined;
-        while (c.SDL_PollEvent(&event) != 0) {
+        while (c.SDL_PollEvent(&event)) {
             switch (event.type) {
-                c.SDL_QUIT => {
+                c.SDL_EVENT_QUIT => {
                     quit = true;
                 },
                 else => {},
@@ -67,7 +52,7 @@ pub fn main() !void {
         }
 
         _ = c.SDL_RenderClear(renderer);
-        c.SDL_RenderPresent(renderer);
+        _ = c.SDL_RenderPresent(renderer);
 
         c.SDL_Delay(10);
     }

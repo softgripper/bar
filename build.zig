@@ -36,18 +36,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    if (target.result.os.tag == .linux) {
-        // The SDL package doesn't work for Linux yet, so we rely on system
-        // packages for now.
-        exe.linkSystemLibrary("SDL2");
-        exe.linkLibC();
-    } else {
-        const sdl_dep = b.dependency("SDL", .{
-            .optimize = .ReleaseFast,
-            .target = target,
-        });
-        exe.linkLibrary(sdl_dep.artifact("SDL2"));
-    }
+    exe.linkLibC(); // This line is crucial
+    exe.addLibraryPath(b.path("SDL3/SDL3.lib"));
+    exe.addObjectFile(b.path("SDL3/SDL3.lib"));
+    exe.addIncludePath(b.path("SDL3/include"));
+    b.installBinFile("SDL3/SDL3.dll", "SDL3.dll");
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
