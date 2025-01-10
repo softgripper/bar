@@ -25,18 +25,18 @@ pub fn main() !void {
     }
     defer c.SDL_Quit();
 
-    const screen = c.SDL_CreateWindow("My Game Window", 640, 480, c.SDL_WINDOW_VULKAN) orelse
-        {
-        c.SDL_Log("Unable to create window: %s", c.SDL_GetError());
-        return error.SDLInitializationFailed;
-    };
-    defer c.SDL_DestroyWindow(screen);
+    var window: ?*c.SDL_Window = undefined;
+    var renderer: ?*c.SDL_Renderer = undefined;
 
-    const renderer = c.SDL_CreateRenderer(screen, null) orelse {
-        c.SDL_Log("Unable to create renderer: %s", c.SDL_GetError());
+    if (!c.SDL_CreateWindowAndRenderer("My Game window", 640, 480, c.SDL_WINDOW_VULKAN, &window, &renderer)) {
+        c.SDL_Log("Unable to create window and renderer: %s", c.SDL_GetError());
         return error.SDLInitializationFailed;
-    };
-    defer c.SDL_DestroyRenderer(renderer);
+    }
+
+    defer {
+        if (window) |w| c.SDL_DestroyWindow(w);
+        if (renderer) |r| c.SDL_DestroyRenderer(r);
+    }
 
     var quit = false;
 
@@ -44,9 +44,7 @@ pub fn main() !void {
         var event: c.SDL_Event = undefined;
         while (c.SDL_PollEvent(&event)) {
             switch (event.type) {
-                c.SDL_EVENT_QUIT => {
-                    quit = true;
-                },
+                c.SDL_EVENT_QUIT => quit = true,
                 else => {},
             }
         }
