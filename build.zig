@@ -38,10 +38,11 @@ pub fn build(b: *std.Build) void {
 
     exe.linkLibC();
 
-    exe.addLibraryPath(b.path("thirdparty/sdl3/lib"));
-    exe.addIncludePath(b.path("thirdparty/sdl3/include"));
-    exe.addObjectFile(b.path("thirdparty/sdl3/lib/SDL3.lib"));
-    b.installBinFile("thirdparty/sdl3/lib/SDL3.dll", "SDL3.dll");
+    const sdl3_path = "thirdparty/sdl3";
+    exe.addLibraryPath(b.path(sdl3_path ++ "/lib"));
+    exe.addIncludePath(b.path(sdl3_path ++ "/include"));
+    exe.addObjectFile(b.path(sdl3_path ++ "/lib/SDL3.lib"));
+    b.installBinFile(sdl3_path ++ "/lib/SDL3.dll", "SDL3.dll");
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
