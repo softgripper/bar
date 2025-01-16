@@ -36,9 +36,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.linkLibC();
-
     const sdl3_path = "thirdparty/sdl3";
+    exe.linkLibC();
     exe.addLibraryPath(b.path(sdl3_path ++ "/lib"));
     exe.addIncludePath(b.path(sdl3_path ++ "/include"));
     exe.addObjectFile(b.path(sdl3_path ++ "/lib/SDL3.lib"));

@@ -1,5 +1,4 @@
 const std = @import("std");
-
 const c = @cImport({
     @cInclude("SDL3/SDL.h");
 });
@@ -7,17 +6,6 @@ const c = @cImport({
 pub fn main() !void {
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // don't forget to flush!
 
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
         c.SDL_Log("Unable to initialize SDL: %s", c.SDL_GetError());
@@ -28,7 +16,9 @@ pub fn main() !void {
     var window: ?*c.SDL_Window = undefined;
     var renderer: ?*c.SDL_Renderer = undefined;
 
-    if (!c.SDL_CreateWindowAndRenderer("My Game window", 640, 480, c.SDL_WINDOW_VULKAN, &window, &renderer)) {
+    const SDL_WINDOW_VULKAN = 0x0000000010000000;
+
+    if (!c.SDL_CreateWindowAndRenderer("My Game window", 640, 480, SDL_WINDOW_VULKAN, &window, &renderer)) {
         c.SDL_Log("Unable to create window and renderer: %s", c.SDL_GetError());
         return error.SDLInitializationFailed;
     }
@@ -54,11 +44,4 @@ pub fn main() !void {
 
         c.SDL_Delay(10);
     }
-}
-
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
 }
