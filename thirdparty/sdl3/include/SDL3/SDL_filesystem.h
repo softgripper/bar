@@ -313,6 +313,9 @@ typedef enum SDL_EnumerationResult
  * terminate the enumeration early, and dictate the return value of the
  * enumeration function itself.
  *
+ * `dirname` is guaranteed to end with a path separator ('\\' on Windows, '/'
+ * on most other platforms).
+ *
  * \param userdata an app-controlled pointer that is passed to the callback.
  * \param dirname the directory that is being enumerated.
  * \param fname the next entry in the enumeration.
@@ -480,11 +483,14 @@ extern SDL_DECLSPEC char ** SDLCALL SDL_GlobDirectory(const char *path, const ch
  * platforms without this concept, this would cause surprises with file access
  * outside of SDL.
  *
+ * The returned path is guaranteed to end with a path separator ('\\' on
+ * Windows, '/' on most other platforms).
+ *
  * \returns a UTF-8 string of the current working directory in
  *          platform-dependent notation. NULL if there's a problem. This
  *          should be freed with SDL_free() when it is no longer needed.
  *
- * \since This function is available since SDL 3.2.0.
+ * \since This function is available since SDL 3.1.8.
  */
 extern SDL_DECLSPEC char * SDLCALL SDL_GetCurrentDirectory(void);
 

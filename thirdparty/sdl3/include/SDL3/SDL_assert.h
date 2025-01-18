@@ -118,8 +118,7 @@ extern "C" {
  *
  * If the program is not running under a debugger, SDL_TriggerBreakpoint will
  * likely terminate the app, possibly without warning. If the current platform
- * isn't supported (SDL doesn't know how to trigger a breakpoint), this macro
- * does nothing.
+ * isn't supported, this macro is left undefined.
  *
  * \threadsafety It is safe to call this macro from any thread.
  *
@@ -127,10 +126,12 @@ extern "C" {
  */
 #define SDL_TriggerBreakpoint() TriggerABreakpointInAPlatformSpecificManner
 
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && _MSC_VER >= 1310
     /* Don't include intrin.h here because it contains C++ code */
     extern void __cdecl __debugbreak(void);
     #define SDL_TriggerBreakpoint() __debugbreak()
+#elif defined(_MSC_VER) && defined(_M_IX86)
+    #define SDL_TriggerBreakpoint() { _asm { int 0x03 }  }
 #elif defined(ANDROID)
     #include <assert.h>
     #define SDL_TriggerBreakpoint() assert(0)
@@ -152,8 +153,7 @@ extern "C" {
     #include <signal.h>
     #define SDL_TriggerBreakpoint() raise(SIGTRAP)
 #else
-    /* How do we trigger breakpoints on this platform? */
-    #define SDL_TriggerBreakpoint()
+    /* SDL_TriggerBreakpoint is intentionally left undefined on unknown platforms. */
 #endif
 
 #ifdef SDL_WIKI_DOCUMENTATION_SECTION

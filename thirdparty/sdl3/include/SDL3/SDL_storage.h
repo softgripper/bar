@@ -47,7 +47,7 @@
  *
  * Consider the following example:
  *
- * ```
+ * ```c
  * void ReadGameData(void)
  * {
  *     extern char** fileNames;
@@ -112,10 +112,10 @@
  *   validated, so an error occurring elsewhere in the program may result in
  *   missing/corrupted save data
  *
- * When using, SDL_Storage, these types of problems are virtually impossible
- * to trip over:
+ * When using SDL_Storage, these types of problems are virtually impossible to
+ * trip over:
  *
- * ```
+ * ```c
  * void ReadGameData(void)
  * {
  *     extern char** fileNames;
@@ -222,6 +222,22 @@
  * playing on another PC (and vice versa) with the save data fully
  * synchronized across all devices, allowing for a seamless experience without
  * having to do full restarts of the program.
+ *
+ * ## Notes on valid paths
+ *
+ * All paths in the Storage API use Unix-style path separators ('/'). Using a
+ * different path separator will not work, even if the underlying platform
+ * would otherwise accept it. This is to keep code using the Storage API
+ * portable between platforms and Storage implementations and simplify app
+ * code.
+ *
+ * Paths with relative directories ("." and "..") are forbidden by the Storage
+ * API.
+ *
+ * All valid UTF-8 strings (discounting the NULL terminator character and the
+ * '/' path separator) are usable for filenames, however, an underlying
+ * Storage implementation may not support particularly strange sequences and
+ * refuse to create files with those names, etc.
  */
 
 #ifndef SDL_storage_h_
