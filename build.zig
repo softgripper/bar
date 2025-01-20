@@ -18,13 +18,6 @@ pub fn build(b: *std.Build) void {
     exe.addObjectFile(b.path(sdl3_path ++ "/lib/SDL3.lib"));
     b.installBinFile(sdl3_path ++ "/lib/SDL3.dll", "SDL3.dll");
 
-    const ecs_dep = b.dependency("entt", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const ecs = ecs_dep.module("zig-ecs");
-    exe.root_module.addImport("ecs", ecs);
-
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
