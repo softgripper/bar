@@ -1,87 +1,56 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("SDL3/SDL.h");
-});
+const c = @import("c.zig").c;
 
 const SCREEN_WIDTH = 800;
 const SCREEN_HEIGHT = 600;
 
 const print = std.debug.print;
 
-var quit = false;
-
 pub fn main() !void {
+    var quit = false;
+
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     print("All your {s} are belong to us.\n", .{"codebase"});
 
-    const render_thread = try std.Thread.spawn(.{}, render_loop, .{});
-    defer render_thread.join();
-
-    try game_loop();
-}
-
-const default_rect = c.SDL_FRect{
-    .x = 0,
-    .y = 0,
-    .h = 100,
-    .w = 100,
-};
-
-var rect = default_rect;
-
-const time = std.time;
-
-fn game_loop() !void {
-    const target_fps = 60;
-    const target_frame_time_ns = time.ns_per_s / target_fps;
-
-    var timer = try std.time.Timer.start();
-
-    while (!quit) {
-        const start_ns = std.time.nanoTimestamp();
-
-        const anim: f32 = @as(f32, @floatFromInt(timer.read() / time.ns_per_ms)) / time.ms_per_s;
-        rect.w = default_rect.w * @sin(anim);
-        rect.h = default_rect.h * @cos(anim);
-
-        rect.x = (SCREEN_WIDTH - rect.w) / 2;
-        rect.y = (SCREEN_HEIGHT - rect.h) / 2;
-
-        const duration = std.time.nanoTimestamp() - start_ns;
-        const sleep_duration = @as(u64, @intCast(target_frame_time_ns - duration));
-        std.Thread.sleep(sleep_duration);
-    }
-}
-
-fn render_loop() !void {
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
-        print("Unable to initialize SDL: {s}\n", .{c.SDL_GetError()});
-        return error.SDLInitializationFailed;
+        c.SDL_Log("Unable to initialize SDL: %s", c.SDL_GetError());
+        return error.sdl_init;
     }
     defer c.SDL_Quit();
 
+    if (!c.SDL_Vulkan_LoadLibrary(null)) {
+        c.SDL_Log("Unable to load vulkan: %s", c.SDL_GetError());
+        return error.sdl_vulkan_load_library;
+    }
+    defer c.SDL_Vulkan_UnloadLibrary();
     var window: ?*c.SDL_Window = null;
     var renderer: ?*c.SDL_Renderer = null;
 
-    // https://github.com/ziglang/zig/issues/22494
-    // const SDL_WINDOW_VULKAN: u64 = 0x0000000010000000;
-    const SDL_WINDOW_RESIZABLE: u64 = 0x0000000000000020;
+    const app_name = "good luck threading";
+    const SDL_WINDOW_RESIZABLE = 0x0000000000000020;
+    const SDL_WINDOW_VULKAN = 0x0000000010000000;
+    const SDL_WINDOW_HIDDEN = 0x0000000000000008;
 
     if (!c.SDL_CreateWindowAndRenderer(
-        "My Game window",
+        app_name,
         SCREEN_WIDTH,
         SCREEN_HEIGHT,
-        SDL_WINDOW_RESIZABLE,
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN,
         &window,
         &renderer,
     )) {
-        print("Unable to create window and renderer: {s}\n", .{c.SDL_GetError()});
-        return error.SDLInitializationFailed;
+        c.SDL_Log("Unable to create window and renderer: %s", c.SDL_GetError());
+        return error.sdl_window_and_renderer;
     }
 
     defer {
         if (window) |w| c.SDL_DestroyWindow(w);
         if (renderer) |r| c.SDL_DestroyRenderer(r);
+    }
+
+    if (!c.SDL_ShowWindow(window)) {
+        c.SDL_Log("Unable to create window and renderer: %s", c.SDL_GetError());
+        return error.sdl_show_window;
     }
 
     _ = c.SDL_SetRenderVSync(renderer, c.SDL_RENDERER_VSYNC_ADAPTIVE);
@@ -101,18 +70,19 @@ fn render_loop() !void {
             }
         }
 
-        render(renderer);
+        _ = c.SDL_SetRenderDrawColor(renderer, 42, 69, 0, 0);
+        _ = c.SDL_RenderClear(renderer);
+
+        _ = c.SDL_SetRenderDrawColor(renderer, 69, 42, 0, 0);
+        _ = c.SDL_RenderFillRect(renderer, &c.SDL_FRect{
+            .x = 0,
+            .y = 0,
+            .h = 100,
+            .w = 100,
+        });
+
+        _ = c.SDL_RenderPresent(renderer);
 
         c.SDL_Delay(17);
     }
-}
-
-inline fn render(renderer: ?*c.SDL_Renderer) void {
-    _ = c.SDL_SetRenderDrawColor(renderer, 42, 69, 0, 0);
-    _ = c.SDL_RenderClear(renderer);
-
-    _ = c.SDL_SetRenderDrawColor(renderer, 69, 42, 0, 0);
-    _ = c.SDL_RenderFillRect(renderer, &rect);
-
-    _ = c.SDL_RenderPresent(renderer);
 }
