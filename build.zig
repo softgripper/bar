@@ -18,6 +18,11 @@ pub fn build(b: *std.Build) void {
     exe.addObjectFile(b.path(sdl3_path ++ "/lib/SDL3.lib"));
     b.installBinFile(sdl3_path ++ "/lib/SDL3.dll", "SDL3.dll");
 
+    const vulkan = b.dependency("vulkan", .{
+        .registry = b.dependency("vulkan_headers", .{}).path("registry/vk.xml"),
+    }).module("vulkan-zig");
+    exe.root_module.addImport("vulkan", vulkan);
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
