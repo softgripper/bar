@@ -1,6 +1,7 @@
 const std = @import("std");
 const c = @import("c.zig").c;
 const vk = @import("vulkan");
+const GraphicsContext = @import("graphics_context.zig").GraphicsContext;
 
 const SCREEN_WIDTH = 800;
 const SCREEN_HEIGHT = 600;
@@ -47,50 +48,22 @@ pub fn main() !void {
     const SDL_WINDOW_VULKAN = 0x0000000010000000;
     const SDL_WINDOW_HIDDEN = 0x0000000000000008;
 
-    const window = c.SDL_CreateWindow(app_name, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN) orelse {
+    const window = c.SDL_CreateWindow(
+        app_name,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT,
+        SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN,
+    ) orelse {
         c.SDL_Log("Unable to create window", c.SDL_GetError());
         return error.sdl_window;
     };
     defer c.SDL_DestroyWindow(window);
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const vk_proc: *const fn (instance: vk.Instance, procname: [*:0]const u8) vk.PfnVoidFunction = @ptrCast(c.SDL_Vulkan_GetVkGetInstanceProcAddr());
-
-    var vkb = try BaseDispatch.load(vk_proc);
-
-    var app_info = vk.ApplicationInfo{
-        .p_application_name = app_name,
-        .application_version = vk.makeApiVersion(0, 0, 0, 0),
-        .p_engine_name = app_name,
-        .engine_version = vk.makeApiVersion(0, 0, 0, 0),
-        .api_version = vk.API_VERSION_1_0,
-    };
-
-    var extension_count: u32 = 0;
-    const extension_names = c.SDL_Vulkan_GetInstanceExtensions(&extension_count);
-    const extension_slice = extension_names[0..extension_count];
-
-    print("Extensions {d}\n", .{extension_count});
-    for (extension_slice) |name| {
-        print("{s}\n", .{name});
-    }
-
-    var instance_create_info = vk.InstanceCreateInfo{
-        .p_application_info = &app_info,
-        .enabled_extension_count = extension_count,
-        .pp_enabled_extension_names = @ptrCast(extension_names),
-    };
-
-    const ac: ?*const vk.AllocationCallbacks = null;
-    const instance = try vkb.createInstance(&instance_create_info, ac);
-
-    const vki = try allocator.create(InstanceDispatch);
-    errdefer allocator.destroy(vki);
-
-    _ = instance;
+    const gc = try GraphicsContext.init(allocator, app_name, window);
+    defer gc.deinit();
 
     if (!c.SDL_ShowWindow(window)) {
         c.SDL_Log("Unable to show: %s", c.SDL_GetError());
