@@ -2,9 +2,12 @@ const std = @import("std");
 const c = @import("c.zig").c;
 const vk = @import("vulkan");
 const GraphicsContext = @import("graphics_context.zig").GraphicsContext;
+const Swapchain = @import("swapchain.zig").Swapchain;
 
-const SCREEN_WIDTH = 800;
-const SCREEN_HEIGHT = 600;
+const extent = vk.Extent2D{
+    .width = 800,
+    .height = 600,
+};
 
 const print = std.debug.print;
 
@@ -29,12 +32,9 @@ const DeviceDispatch = vk.DeviceWrapper(apis);
 const Instance = vk.InstanceProxy(apis);
 const Device = vk.DeviceProxy(apis);
 
-const builtin = @import("builtin");
-
 pub fn main() !void {
     var quit = false;
 
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     print("All your {s} are belong to us.\n", .{"codebase"});
 
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
@@ -50,25 +50,43 @@ pub fn main() !void {
 
     const window = c.SDL_CreateWindow(
         app_name,
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT,
+        extent.width,
+        extent.height,
         SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN,
     ) orelse {
-        c.SDL_Log("Unable to create window", c.SDL_GetError());
+        c.SDL_Log("Unable to create window: %s", c.SDL_GetError());
         return error.sdl_window;
     };
     defer c.SDL_DestroyWindow(window);
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    defer if (gpa.deinit() == .leak) {
+        @panic("Leaked memory");
+    };
+
     const allocator = gpa.allocator();
 
     const gc = try GraphicsContext.init(allocator, app_name, window);
     defer gc.deinit();
 
+    print("Using device: {s}", .{gc.deviceName()});
+
+    var swapchain = try Swapchain.init(&gc, allocator, extent);
+    defer swapchain.deinit();
+
     if (!c.SDL_ShowWindow(window)) {
-        c.SDL_Log("Unable to show: %s", c.SDL_GetError());
+        c.SDL_Log("Unable to show window: %s", c.SDL_GetError());
         return error.sdl_show_window;
     }
+
+    const pipeline_layout = try gc.dev.createPipelineLayout(&.{
+        .flags = .{},
+        .set_layout_count = 0,
+        .p_set_layouts = undefined,
+        .push_constant_range_count = 0,
+        .p_push_constant_ranges = undefined,
+    }, null);
+    defer gc.dev.destroyPipelineLayout(pipeline_layout, null);
 
     while (!quit) {
         var event: c.SDL_Event = undefined;

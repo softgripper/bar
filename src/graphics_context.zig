@@ -53,23 +53,10 @@ pub const GraphicsContext = struct {
         var self: GraphicsContext = undefined;
         self.allocator = allocator;
 
-        const vk_proc: *const fn (instance: vk.Instance, procname: [*:0]const u8) vk.PfnVoidFunction = @ptrCast(c.SDL_Vulkan_GetVkGetInstanceProcAddr());
-        self.vkb = try BaseDispatch.load(vk_proc);
-
-        var extension_count: u32 = 0;
-        const extension_names = c.SDL_Vulkan_GetInstanceExtensions(&extension_count);
-
-        const extension_slice = extension_names[0..extension_count];
-
-        std.debug.print("Extensions {d}\n", .{extension_count});
-        for (extension_slice) |name| {
-            std.debug.print("{s}\n", .{name});
-        }
-
-        std.debug.print("Required extensions\n", .{});
-        for (required_device_extensions) |name| {
-            std.debug.print("{s}\n", .{name});
-        }
+        self.vkb = try BaseDispatch.load(@as(
+            vk.PfnGetInstanceProcAddr,
+            @ptrCast(c.SDL_Vulkan_GetVkGetInstanceProcAddr()),
+        ));
 
         const app_info = vk.ApplicationInfo{
             .p_application_name = app_name,
@@ -78,6 +65,9 @@ pub const GraphicsContext = struct {
             .engine_version = vk.makeApiVersion(0, 0, 0, 0),
             .api_version = vk.API_VERSION_1_2,
         };
+
+        var extension_count: u32 = 0;
+        const extension_names = c.SDL_Vulkan_GetInstanceExtensions(&extension_count);
 
         const instance = try self.vkb.createInstance(&.{
             .p_application_info = &app_info,
