@@ -11,12 +11,15 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const sdl3_path = "thirdparty/sdl3";
-    exe.linkLibC();
-    exe.addLibraryPath(b.path(sdl3_path ++ "/lib"));
-    exe.addIncludePath(b.path(sdl3_path ++ "/include"));
-    exe.addObjectFile(b.path(sdl3_path ++ "/lib/SDL3.lib"));
-    b.installBinFile(sdl3_path ++ "/lib/SDL3.dll", "SDL3.dll");
+    const sdl_dep = b.dependency("sdl", .{
+        .target = target,
+        .optimize = optimize,
+        //.preferred_link_mode = .static, // or .dynamic
+    });
+    const sdl_lib = sdl_dep.artifact("SDL3");
+    exe.root_module.linkLibrary(sdl_lib);
+
+    // const sdl_test_lib = sdl_dep.artifact("SDL3_test");
 
     const vulkan = b.dependency("vulkan", .{
         .registry = b.dependency("vulkan_headers", .{}).path("registry/vk.xml"),

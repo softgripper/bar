@@ -31,6 +31,10 @@
             .url = "https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.305.tar.gz",
             .hash = "12206dac2471bb08de8fc35d472f844b1029b3c3c8c0fc822003436dd62bda1b3b5b",
         },
+        .sdl = .{
+            .url = "git+https://github.com/castholm/SDL.git#bbc8dfb78c2a71f10b21548b58dfe5ac46cc3fef",
+            .hash = "122046c6dcdcf941e6e5b1e8fa273185d04420e56436d47b906308eaf70208222f59",
+        },
     },
     .paths = .{
         "build.zig",
