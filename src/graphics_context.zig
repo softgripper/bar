@@ -155,6 +155,9 @@ fn createSurface(instance: Instance, window: *c.SDL_Window) !vk.SurfaceKHR {
         return error.SurfaceInitFailed;
     }
 
+    // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
+    std.Thread.sleep(1);
+
     return surface;
 }
 
@@ -230,6 +233,7 @@ fn checkSuitable(
 
     if (try allocateQueues(instance, pdev, allocator, surface)) |allocation| {
         const props = instance.getPhysicalDeviceProperties(pdev);
+
         return DeviceCandidate{
             .pdev = pdev,
             .props = props,
@@ -271,6 +275,7 @@ fn allocateQueues(instance: Instance, pdev: vk.PhysicalDevice, allocator: Alloca
 
 fn checkSurfaceSupport(instance: Instance, pdev: vk.PhysicalDevice, surface: vk.SurfaceKHR) !bool {
     var format_count: u32 = undefined;
+
     _ = try instance.getPhysicalDeviceSurfaceFormatsKHR(pdev, surface, &format_count, null);
 
     var present_mode_count: u32 = undefined;

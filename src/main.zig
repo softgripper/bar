@@ -39,6 +39,14 @@ const Vertex = struct {
 };
 
 const vertices = [_]Vertex{
+    .{ .pos = .{ -1, -1 }, .color = .{ 1, 0, 0 } },
+    .{ .pos = .{ 1, -1 }, .color = .{ 0, 1, 0 } },
+    .{ .pos = .{ -1, 1 }, .color = .{ 0, 0, 1 } },
+
+    .{ .pos = .{ -1, 1 }, .color = .{ 0, 0, 1 } },
+    .{ .pos = .{ 1, -1 }, .color = .{ 0, 1, 0 } },
+    .{ .pos = .{ 1, 1 }, .color = .{ 1, 0, 0 } },
+
     .{ .pos = .{ 0, -0.5 }, .color = .{ 1, 0, 0 } },
     .{ .pos = .{ 0.5, 0.5 }, .color = .{ 0, 1, 0 } },
     .{ .pos = .{ -0.5, 0.5 }, .color = .{ 0, 0, 1 } },
@@ -160,7 +168,7 @@ pub fn main() !void {
         }
 
         if (c.SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED != 0) {
-            print("Minimized, don't bother rendering\n", .{});
+            // print("Minimized, don't bother rendering\n", .{});
             continue;
         }
 
@@ -196,20 +204,7 @@ pub fn main() !void {
             );
         }
 
-        // _ = c.SDL_SetRenderDrawColor(renderer, 42, 69, 0, 0);
-        // _ = c.SDL_RenderClear(renderer);
-
-        // _ = c.SDL_SetRenderDrawColor(renderer, 69, 42, 0, 0);
-        // _ = c.SDL_RenderFillRect(renderer, &c.SDL_FRect{
-        //     .x = 0,
-        //     .y = 0,
-        //     .h = 100,
-        //     .w = 100,
-        // });
-
-        // _ = c.SDL_RenderPresent(renderer);
-
-        c.SDL_Delay(17);
+        // c.SDL_Delay(17);
     }
 
     try swapchain.waitForAllFences();
