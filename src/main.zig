@@ -68,16 +68,11 @@ pub fn main() !void {
         .height = 600,
     };
 
-    const SDL_WINDOW_RESIZABLE = 0x0000000000000020;
-    const SDL_WINDOW_VULKAN = 0x0000000010000000;
-    const SDL_WINDOW_HIDDEN = 0x0000000000000008;
-    const SDL_WINDOW_MINIMIZED = 0x0000000000000040;
-
     const window = c.SDL_CreateWindow(
         app_name,
         @intCast(extent.width),
         @intCast(extent.height),
-        SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN,
+        c.SDL_WINDOW_HIDDEN | c.SDL_WINDOW_RESIZABLE | c.SDL_WINDOW_VULKAN,
     ) orelse {
         c.SDL_Log("Unable to create window: %s", c.SDL_GetError());
         return error.sdl_window;
@@ -94,7 +89,7 @@ pub fn main() !void {
     const gc = try GraphicsContext.init(allocator, app_name, window);
     defer gc.deinit();
 
-    print("Using device: {s}", .{gc.deviceName()});
+    print("Using device: {s}\n", .{gc.deviceName()});
 
     var swapchain = try Swapchain.init(&gc, allocator, extent);
     defer swapchain.deinit();
@@ -167,7 +162,7 @@ pub fn main() !void {
             }
         }
 
-        if (c.SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED != 0) {
+        if (c.SDL_GetWindowFlags(window) & c.SDL_WINDOW_MINIMIZED != 0) {
             // print("Minimized, don't bother rendering\n", .{});
             continue;
         }

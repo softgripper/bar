@@ -67,12 +67,18 @@ pub const GraphicsContext = struct {
         };
 
         var extension_count: u32 = 0;
-        const extension_names = c.SDL_Vulkan_GetInstanceExtensions(&extension_count);
+        const extensions = c.SDL_Vulkan_GetInstanceExtensions(&extension_count);
+        const extensions_slice = extensions[0..extension_count];
+
+        std.debug.print("Extensions:\n", .{});
+        for (extensions_slice) |item| {
+            std.debug.print("{s}\n", .{item});
+        }
 
         const instance = try self.vkb.createInstance(&.{
             .p_application_info = &app_info,
             .enabled_extension_count = extension_count,
-            .pp_enabled_extension_names = @ptrCast(extension_names),
+            .pp_enabled_extension_names = @ptrCast(extensions),
         }, null);
 
         const vki = try allocator.create(InstanceDispatch);
@@ -155,7 +161,7 @@ fn createSurface(instance: Instance, window: *c.SDL_Window) !vk.SurfaceKHR {
         return error.SurfaceInitFailed;
     }
 
-    // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
+    // // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
     std.Thread.sleep(1);
 
     return surface;
