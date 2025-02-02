@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @import("c.zig").c;
+const sdl = @import("sdl.zig");
 const vk = @import("vulkan");
 const GraphicsContext = @import("graphics_context.zig").GraphicsContext;
 const Swapchain = @import("swapchain.zig").Swapchain;
@@ -57,27 +57,27 @@ pub fn main() !void {
 
     print("All your {s} are belong to us.\n", .{"codebase"});
 
-    if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
-        c.SDL_Log("Unable to initialize SDL: %s", c.SDL_GetError());
-        return error.sdl_init;
+    if (!sdl.init(sdl.INIT_VIDEO)) {
+        sdl.log("Unable to initialize SDL: %s", sdl.getError());
+        return error.SdlInit;
     }
-    defer c.SDL_Quit();
+    defer sdl.quit();
 
     var extent = vk.Extent2D{
         .width = 800,
         .height = 600,
     };
 
-    const window = c.SDL_CreateWindow(
+    const window = sdl.createWindow(
         app_name,
         @intCast(extent.width),
         @intCast(extent.height),
-        c.SDL_WINDOW_HIDDEN | c.SDL_WINDOW_RESIZABLE | c.SDL_WINDOW_VULKAN,
+        sdl.WINDOW_HIDDEN | sdl.WINDOW_RESIZABLE | sdl.WINDOW_VULKAN,
     ) orelse {
-        c.SDL_Log("Unable to create window: %s", c.SDL_GetError());
-        return error.sdl_window;
+        sdl.log("Unable to create window: %s", sdl.getError());
+        return error.SdlWindow;
     };
-    defer c.SDL_DestroyWindow(window);
+    defer sdl.destroyWindow(window);
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) {
@@ -94,9 +94,9 @@ pub fn main() !void {
     var swapchain = try Swapchain.init(&gc, allocator, extent);
     defer swapchain.deinit();
 
-    if (!c.SDL_ShowWindow(window)) {
-        c.SDL_Log("Unable to show window: %s", c.SDL_GetError());
-        return error.sdl_show_window;
+    if (!sdl.showWindow(window)) {
+        sdl.log("Unable to show window: %s", sdl.getError());
+        return error.SdlShowWindow;
     }
 
     const pipeline_layout = try gc.dev.createPipelineLayout(&.{
@@ -148,12 +148,12 @@ pub fn main() !void {
     defer destroyCommandBuffers(&gc, pool, allocator, cmdbufs);
 
     while (!quit) {
-        var event: c.SDL_Event = undefined;
-        while (c.SDL_PollEvent(&event)) {
+        var event: sdl.Event = undefined;
+        while (sdl.pollEvent(&event)) {
             switch (event.type) {
-                c.SDL_EVENT_QUIT => quit = true,
-                c.SDL_EVENT_KEY_DOWN => {
-                    const name = std.mem.span(c.SDL_GetKeyName(event.key.key));
+                sdl.EVENT_QUIT => quit = true,
+                sdl.EVENT_KEY_DOWN => {
+                    const name = std.mem.span(sdl.getKeyName(event.key.key));
                     if (std.mem.eql(u8, name, "Escape")) {
                         quit = true;
                     }
@@ -162,7 +162,7 @@ pub fn main() !void {
             }
         }
 
-        if (c.SDL_GetWindowFlags(window) & c.SDL_WINDOW_MINIMIZED != 0) {
+        if (sdl.getWindowFlags(window) & sdl.WINDOW_MINIMIZED != 0) {
             // print("Minimized, don't bother rendering\n", .{});
             continue;
         }
@@ -176,7 +176,7 @@ pub fn main() !void {
 
         var w: c_int = 0;
         var h: c_int = 0;
-        _ = c.SDL_GetWindowSize(window, &w, &h);
+        _ = sdl.getWindowSize(window, &w, &h);
 
         if (state == .suboptimal or extent.width != @as(u32, @intCast(w)) or extent.height != @as(u32, @intCast(h))) {
             extent.width = @intCast(w);
@@ -199,7 +199,7 @@ pub fn main() !void {
             );
         }
 
-        // c.SDL_Delay(17);
+        // sdl.delay;
     }
 
     try swapchain.waitForAllFences();

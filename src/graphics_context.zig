@@ -1,6 +1,6 @@
 const std = @import("std");
 const vk = @import("vulkan");
-const c = @import("c.zig");
+const sdl = @import("sdl.zig");
 const Allocator = std.mem.Allocator;
 
 const required_device_extensions = [_][*:0]const u8{vk.extensions.khr_swapchain.name};
@@ -49,14 +49,11 @@ pub const GraphicsContext = struct {
     graphics_queue: Queue,
     present_queue: Queue,
 
-    pub fn init(allocator: Allocator, app_name: [*:0]const u8, window: *c.SDL_Window) !GraphicsContext {
+    pub fn init(allocator: Allocator, app_name: [*:0]const u8, window: *sdl.Window) !GraphicsContext {
         var self: GraphicsContext = undefined;
         self.allocator = allocator;
 
-        self.vkb = try BaseDispatch.load(@as(
-            vk.PfnGetInstanceProcAddr,
-            @ptrCast(c.SDL_Vulkan_GetVkGetInstanceProcAddr()),
-        ));
+        self.vkb = try BaseDispatch.load(sdl.vk_proc_address());
 
         const app_info = vk.ApplicationInfo{
             .p_application_name = app_name,
@@ -67,7 +64,7 @@ pub const GraphicsContext = struct {
         };
 
         var extension_count: u32 = 0;
-        const extensions = c.SDL_Vulkan_GetInstanceExtensions(&extension_count);
+        const extensions = sdl.vk_get_instance_extensions(&extension_count);
         const extensions_slice = extensions[0..extension_count];
 
         std.debug.print("Extensions:\n", .{});
@@ -154,10 +151,10 @@ pub const Queue = struct {
     }
 };
 
-fn createSurface(instance: Instance, window: *c.SDL_Window) !vk.SurfaceKHR {
+fn createSurface(instance: Instance, window: *sdl.Window) !vk.SurfaceKHR {
     var surface: vk.SurfaceKHR = undefined;
-    if (!c.SDL_Vulkan_CreateSurface(window, instance.handle, null, &surface)) {
-        c.SDL_Log("Unable to create surface: %s", c.SDL_GetError());
+    if (!sdl.vk_create_surface(window, instance.handle, null, &surface)) {
+        sdl.log("Unable to create surface: %s", sdl.getError());
         return error.SurfaceInitFailed;
     }
 
