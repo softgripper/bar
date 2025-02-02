@@ -57,27 +57,19 @@ pub fn main() !void {
 
     print("All your {s} are belong to us.\n", .{"codebase"});
 
-    if (!sdl.init(sdl.INIT_VIDEO)) {
-        sdl.log("Unable to initialize SDL: %s", sdl.getError());
-        return error.SdlInit;
-    }
-    defer sdl.quit();
+    try sdl.init(&.{.video});
+    defer sdl.deinit();
 
     var extent = vk.Extent2D{
         .width = 800,
         .height = 600,
     };
 
-    const window = sdl.createWindow(
-        app_name,
-        @intCast(extent.width),
-        @intCast(extent.height),
-        sdl.WINDOW_HIDDEN | sdl.WINDOW_RESIZABLE | sdl.WINDOW_VULKAN,
-    ) orelse {
-        sdl.log("Unable to create window: %s", sdl.getError());
-        return error.SdlWindow;
-    };
-    defer sdl.destroyWindow(window);
+    const window = try sdl.createWindow(&.{
+        .title = app_name,
+        .flags = &[_]sdl.WindowFlag{ .hidden, .resizeable, .vulkan },
+    });
+    defer window.destroy();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) {
@@ -86,7 +78,7 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    const gc = try GraphicsContext.init(allocator, app_name, window);
+    const gc = try GraphicsContext.init(allocator, app_name, &window);
     defer gc.deinit();
 
     print("Using device: {s}\n", .{gc.deviceName()});
@@ -94,10 +86,7 @@ pub fn main() !void {
     var swapchain = try Swapchain.init(&gc, allocator, extent);
     defer swapchain.deinit();
 
-    if (!sdl.showWindow(window)) {
-        sdl.log("Unable to show window: %s", sdl.getError());
-        return error.SdlShowWindow;
-    }
+    try window.show();
 
     const pipeline_layout = try gc.dev.createPipelineLayout(&.{
         .flags = .{},
@@ -162,7 +151,7 @@ pub fn main() !void {
             }
         }
 
-        if (sdl.getWindowFlags(window) & sdl.WINDOW_MINIMIZED != 0) {
+        if (window.hasFlag(.minimized)) {
             // print("Minimized, don't bother rendering\n", .{});
             continue;
         }
@@ -174,13 +163,11 @@ pub fn main() !void {
             else => |narrow| return narrow,
         };
 
-        var w: c_int = 0;
-        var h: c_int = 0;
-        _ = sdl.getWindowSize(window, &w, &h);
+        const size = window.size();
 
-        if (state == .suboptimal or extent.width != @as(u32, @intCast(w)) or extent.height != @as(u32, @intCast(h))) {
-            extent.width = @intCast(w);
-            extent.height = @intCast(h);
+        if (state == .suboptimal or extent.width != @as(u32, @intCast(size.w)) or extent.height != @as(u32, @intCast(size.h))) {
+            extent.width = @intCast(size.w);
+            extent.height = @intCast(size.h);
             try swapchain.recreate(extent);
 
             destroyFramebuffers(&gc, allocator, framebuffers);

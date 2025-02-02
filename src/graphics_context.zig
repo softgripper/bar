@@ -49,7 +49,7 @@ pub const GraphicsContext = struct {
     graphics_queue: Queue,
     present_queue: Queue,
 
-    pub fn init(allocator: Allocator, app_name: [*:0]const u8, window: *sdl.Window) !GraphicsContext {
+    pub fn init(allocator: Allocator, app_name: [*:0]const u8, window: *const sdl.Window) !GraphicsContext {
         var self: GraphicsContext = undefined;
         self.allocator = allocator;
 
@@ -151,10 +151,10 @@ pub const Queue = struct {
     }
 };
 
-fn createSurface(instance: Instance, window: *sdl.Window) !vk.SurfaceKHR {
+fn createSurface(instance: Instance, window: *const sdl.Window) !vk.SurfaceKHR {
     var surface: vk.SurfaceKHR = undefined;
-    if (!sdl.vk_create_surface(window, instance.handle, null, &surface)) {
-        sdl.log("Unable to create surface: %s", sdl.getError());
+    if (!sdl.vk_create_surface(window.handle, instance.handle, null, &surface)) {
+        sdl.log("Unable to create surface");
         return error.SurfaceInitFailed;
     }
 
