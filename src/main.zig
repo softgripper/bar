@@ -5,6 +5,8 @@ const GraphicsContext = @import("graphics_context.zig").GraphicsContext;
 const Swapchain = @import("swapchain.zig").Swapchain;
 const Allocator = std.mem.Allocator;
 
+const game_loop = @import("game_loop.zig");
+
 const print = std.debug.print;
 
 const vert_spv align(@alignOf(u32)) = @embedFile("vertex_shader").*;
@@ -136,6 +138,8 @@ pub fn main() !void {
     );
     defer destroyCommandBuffers(&gc, pool, allocator, cmdbufs);
 
+    var timer = try std.time.Timer.start();
+
     while (!quit) {
         var event: sdl.Event = undefined;
         while (sdl.pollEvent(&event)) {
@@ -155,6 +159,8 @@ pub fn main() !void {
             // print("Minimized, don't bother rendering\n", .{});
             continue;
         }
+
+        game_loop.update(@as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_ms);
 
         const cmdbuf = cmdbufs[swapchain.image_index];
 
