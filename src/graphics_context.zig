@@ -84,7 +84,7 @@ pub const GraphicsContext = struct {
         self.instance = Instance.init(instance, vki);
         errdefer self.instance.destroyInstance(null);
 
-        self.surface = try createSurface(self.instance, window);
+        self.surface = try window.createVkSurface(self.instance.handle);
         errdefer self.instance.destroySurfaceKHR(self.surface, null);
 
         const candidate = try pickPhysicalDevice(self.instance, allocator, self.surface);

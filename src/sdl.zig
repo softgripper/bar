@@ -4,7 +4,6 @@ const vk = @import("vulkan");
 
 extern fn SDL_Vulkan_CreateSurface(window: ?*c.SDL_Window, instance: vk.Instance, allocator: ?*const vk.AllocationCallbacks, surface: *const vk.SurfaceKHR) bool;
 
-pub const vk_create_surface = SDL_Vulkan_CreateSurface;
 pub fn vk_proc_address() vk.PfnGetInstanceProcAddr {
     return @ptrCast(c.SDL_Vulkan_GetVkGetInstanceProcAddr());
 }
@@ -17,7 +16,7 @@ pub const EVENT_KEY_DOWN = c.SDL_EVENT_KEY_DOWN;
 pub const getKeyName = c.SDL_GetKeyName;
 pub const delay = c.SDL_Delay;
 
-const SdlError = error{ Init, CreateWindow, ShowWindow };
+const SdlError = error{ Init, CreateWindow, ShowWindow, VkCreateSurface };
 
 pub const InitFlag = enum(c_uint) {
     audio = c.SDL_INIT_AUDIO,
@@ -129,6 +128,19 @@ pub const Window = struct {
             .w = w,
             .h = h,
         };
+    }
+
+    pub fn createVkSurface(self: *const Window, instance: vk.Instance) SdlError!vk.SurfaceKHR {
+        var surface: vk.SurfaceKHR = undefined;
+        if (!SDL_Vulkan_CreateSurface(self.handle, instance, null, &surface)) {
+            log("Unable to create surface");
+            return SdlError.VkCreateSurface;
+        }
+
+        // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
+        std.Thread.sleep(1);
+
+        return surface;
     }
 };
 
