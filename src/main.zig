@@ -160,7 +160,7 @@ pub fn main() !void {
             continue;
         }
 
-        game_loop.update(@as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_ms);
+        game_loop.update(timer.lap());
 
         const cmdbuf = cmdbufs[swapchain.image_index];
 
