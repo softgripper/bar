@@ -1,4 +1,5 @@
 const std = @import("std");
+const time = std.time;
 
 const nameOf = struct {
     fn Dummy(func: anytype) type {
@@ -23,12 +24,7 @@ pub fn bench(args: struct {
     allocator: std.mem.Allocator,
     iterations: u64 = 1,
     warmup_iterations: u64 = 0,
-}, func: anytype, func_args: anytype) !struct {
-    avg_ns: f64,
-    min_ns: u64,
-    max_ns: u64,
-    std_dev: f64,
-} {
+}, func: anytype, func_args: anytype) !void {
     print("bench:\n func {s}\n", .{nameOf.Fn(func)});
 
     // warmup
@@ -46,12 +42,11 @@ pub fn bench(args: struct {
     // bench
     print(" iterations {d}\n", .{args.iterations});
     i = 0;
-    var timer = try std.time.Timer.start();
+    var timer = try time.Timer.start();
     while (i < args.iterations) : (i += 1) {
         timer.reset();
-        const result = @call(.auto, func, func_args);
+        @call(.auto, func, func_args);
         try durations.append(timer.read());
-        _ = result;
     }
 
     // stats
@@ -76,10 +71,42 @@ pub fn bench(args: struct {
 
     const std_dev = @sqrt(@as(f64, @floatFromInt(sq_sum)) / @as(f64, @floatFromInt(args.iterations)));
 
-    return .{
+    const result = .{
         .avg_ns = avg,
         .min_ns = min,
         .max_ns = max,
         .std_dev = std_dev,
     };
+    print(
+        \\----------------
+        \\average:  {d: >6.2} ms
+        \\min:      {d: >6.2} ms
+        \\max:      {d: >6.2} ms
+        \\std dev: ±{d: >6.2} ms
+        \\
+    , .{
+        result.avg_ns / time.ns_per_ms,
+        result.min_ns / time.ns_per_ms,
+        result.max_ns / time.ns_per_ms,
+        result.std_dev / time.ns_per_ms,
+    });
+}
+
+pub fn benchTest() void {
+    std.Thread.sleep(2 * time.ns_per_ms);
+}
+
+const testing = std.testing;
+test "game_loop test" {
+    const allocator = testing.allocator;
+
+    try bench(
+        .{
+            .allocator = allocator,
+            .warmup_iterations = 200,
+            .iterations = 2000,
+        },
+        benchTest,
+        .{},
+    );
 }
