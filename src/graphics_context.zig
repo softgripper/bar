@@ -158,9 +158,6 @@ fn createSurface(instance: Instance, window: *const sdl.Window) !vk.SurfaceKHR {
         return error.SurfaceInitFailed;
     }
 
-    // // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
-    std.Thread.sleep(1);
-
     return surface;
 }
 
