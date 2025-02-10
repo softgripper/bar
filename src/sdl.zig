@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @import("c.zig").c;
+const c = @import("c.zig");
 const vk = @import("vulkan");
 
 extern fn SDL_Vulkan_CreateSurface(window: ?*c.SDL_Window, instance: vk.Instance, allocator: ?*const vk.AllocationCallbacks, surface: *const vk.SurfaceKHR) bool;
@@ -102,6 +102,7 @@ pub fn createWindow(args: *const CreateWindowArgs) SdlError!Window {
 
 pub const Window = struct {
     handle: *c.SDL_Window,
+
     pub fn destroy(self: *const Window) void {
         c.SDL_DestroyWindow(self.handle);
     }

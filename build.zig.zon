@@ -24,12 +24,12 @@
     // internet connectivity.
     .dependencies = .{
         .vulkan = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig#1fd5a6e217dfcc7e4406d449924a1feb1ecffbb9",
-            .hash = "122096b4021c4bb35d373d589a31237e2ac834969ea50401d73cc50780aaec8ea367",
+            .url = "git+https://github.com/Snektron/vulkan-zig#604416bf44baf95568c428e1aa55499aa8e07607",
+            .hash = "1220129ea1652cc0f8578db3dcba254bc9fbc6fdd195b5e1021bf4da8592ea5dc9fb",
         },
         .vulkan_headers = .{
-            .url = "https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.306.tar.gz",
-            .hash = "12206117246e94243d31cb1f3475531bda932e44c4ec0af89eea3ed662e3caa5f950",
+            .url = "https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.307.tar.gz",
+            .hash = "12207c39644bf0226bdfa332939d3336d588985af5af3b3952c91d4ca9828e79a632",
         },
         .sdl = .{
             .url = "git+https://github.com/castholm/SDL.git#bbc8dfb78c2a71f10b21548b58dfe5ac46cc3fef",
