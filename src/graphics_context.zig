@@ -3,8 +3,15 @@ const vk = @import("vulkan");
 const sdl = @import("sdl.zig");
 const Allocator = std.mem.Allocator;
 
-const required_device_extensions = [_][*:0]const u8{vk.extensions.khr_swapchain.name};
-const validation_layers = [_][*:0]const u8{"VK_LAYER_KHRONOS_validation"};
+const required_device_extensions = [_][*:0]const u8{
+    vk.extensions.khr_swapchain.name,
+};
+
+const enable_validation_layers = true;
+const validation_layers = [_][*:0]const u8{
+    "VK_LAYER_KHRONOS_validation",
+};
+
 /// To construct base, instance and device wrappers for vulkan-zig, you need to pass a list of 'apis' to it.
 const apis: []const vk.ApiInfo = &.{
     // You can either add invidiual functions by manually creating an 'api'
@@ -20,7 +27,7 @@ const apis: []const vk.ApiInfo = &.{
     vk.features.version_1_0,
     vk.extensions.khr_surface,
     vk.extensions.khr_swapchain,
-    // vk.extensions.ext_debug_utils,
+    vk.extensions.ext_debug_utils,
 };
 
 /// Next, pass the `apis` to the wrappers to create dispatch tables.
@@ -55,7 +62,7 @@ pub const GraphicsContext = struct {
 
         self.vkb = try BaseDispatch.load(sdl.vk_proc_address());
 
-        if (!try checkValidationLayerSupport(self.vkb, allocator)) {
+        if (enable_validation_layers and !try checkValidationLayerSupport(self.vkb, allocator)) {
             return error.ValidationSupportNotFound;
         }
 
@@ -69,17 +76,25 @@ pub const GraphicsContext = struct {
 
         var extension_count: u32 = 0;
         const extensions = sdl.vk_get_instance_extensions(&extension_count);
-        const extensions_slice = extensions[0..extension_count];
 
-        std.debug.print("Extensions:\n", .{});
-        for (extensions_slice) |item| {
+        var extensions_list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
+        defer extensions_list.deinit();
+
+        try extensions_list.appendSlice(extensions[0..extension_count]);
+
+        if (enable_validation_layers) {
+            try extensions_list.append(vk.extensions.ext_debug_utils.name);
+        }
+
+        std.debug.print("Extensions: {d}\n", .{extensions_list.items.len});
+        for (extensions_list.items) |item| {
             std.debug.print("{s}\n", .{item});
         }
 
         const instance = try self.vkb.createInstance(&.{
             .p_application_info = &app_info,
-            .enabled_extension_count = extension_count,
-            .pp_enabled_extension_names = @ptrCast(extensions),
+            .enabled_extension_count = @intCast(extensions_list.items.len),
+            .pp_enabled_extension_names = @ptrCast(extensions_list.items),
         }, null);
 
         const vki = try allocator.create(InstanceDispatch);
@@ -326,4 +341,26 @@ fn checkValidationLayerSupport(vkb: BaseDispatch, allocator: Allocator) !bool {
         }
     }
     return true;
+}
+
+fn getRequiredExtensionsAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
+    var extensions_count: u32 = 0;
+    const extensions = sdl.vk_get_instance_extensions(&extensions_count);
+
+    var list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
+    defer list.deinit();
+
+    try list.appendSlice(extensions[0..extensions_count]);
+
+    if (enable_validation_layers) {
+        try list.append(vk.extensions.ext_debug_utils.name);
+        extensions_count = @intCast(list.items.len);
+    }
+
+    std.debug.print("Extensions: {d}\n", .{extensions_count});
+    for (list.items) |item| {
+        std.debug.print("{s}\n", .{item});
+    }
+
+    return list;
 }
