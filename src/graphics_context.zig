@@ -66,33 +66,17 @@ pub const GraphicsContext = struct {
             return error.ValidationSupportNotFound;
         }
 
-        const app_info = vk.ApplicationInfo{
-            .p_application_name = app_name,
-            .application_version = vk.makeApiVersion(0, 0, 0, 0),
-            .p_engine_name = app_name,
-            .engine_version = vk.makeApiVersion(0, 0, 0, 0),
-            .api_version = vk.API_VERSION_1_2,
-        };
-
-        var extension_count: u32 = 0;
-        const extensions = sdl.vk_get_instance_extensions(&extension_count);
-
-        var extensions_list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
+        const extensions_list = try getRequiredExtensionListAlloc(allocator);
         defer extensions_list.deinit();
 
-        try extensions_list.appendSlice(extensions[0..extension_count]);
-
-        if (enable_validation_layers) {
-            try extensions_list.append(vk.extensions.ext_debug_utils.name);
-        }
-
-        std.debug.print("Extensions: {d}\n", .{extensions_list.items.len});
-        for (extensions_list.items) |item| {
-            std.debug.print("{s}\n", .{item});
-        }
-
         const instance = try self.vkb.createInstance(&.{
-            .p_application_info = &app_info,
+            .p_application_info = &.{
+                .p_application_name = app_name,
+                .application_version = vk.makeApiVersion(0, 0, 0, 0),
+                .p_engine_name = app_name,
+                .engine_version = vk.makeApiVersion(0, 0, 0, 0),
+                .api_version = vk.API_VERSION_1_4,
+            },
             .enabled_extension_count = @intCast(extensions_list.items.len),
             .pp_enabled_extension_names = @ptrCast(extensions_list.items),
         }, null);
@@ -362,5 +346,23 @@ fn getRequiredExtensionsAlloc(allocator: Allocator) !std.ArrayList([*c]const u8)
         std.debug.print("{s}\n", .{item});
     }
 
+    return list;
+}
+
+fn getRequiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
+    var extension_count: u32 = 0;
+    const extensions = sdl.vk_get_instance_extensions(&extension_count);
+    var list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
+
+    try list.appendSlice(extensions[0..extension_count]);
+
+    if (enable_validation_layers) {
+        try list.append(vk.extensions.ext_debug_utils.name);
+    }
+
+    std.debug.print("Extensions: {d}\n", .{list.items.len});
+    for (list.items) |item| {
+        std.debug.print("{s}\n", .{item});
+    }
     return list;
 }
