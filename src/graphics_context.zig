@@ -4,7 +4,7 @@ const sdl = @import("sdl.zig");
 const Allocator = std.mem.Allocator;
 
 const required_device_extensions = [_][*:0]const u8{vk.extensions.khr_swapchain.name};
-
+const validation_layers = [_][*:0]const u8{"VK_LAYER_KHRONOS_validation"};
 /// To construct base, instance and device wrappers for vulkan-zig, you need to pass a list of 'apis' to it.
 const apis: []const vk.ApiInfo = &.{
     // You can either add invidiual functions by manually creating an 'api'
@@ -54,6 +54,10 @@ pub const GraphicsContext = struct {
         self.allocator = allocator;
 
         self.vkb = try BaseDispatch.load(sdl.vk_proc_address());
+
+        if (!try checkValidationLayerSupport(self.vkb, allocator)) {
+            return error.ValidationSupportNotFound;
+        }
 
         const app_info = vk.ApplicationInfo{
             .p_application_name = app_name,
@@ -302,5 +306,24 @@ fn checkExtensionSupport(
         }
     }
 
+    return true;
+}
+
+fn checkValidationLayerSupport(vkb: BaseDispatch, allocator: Allocator) !bool {
+    const available_layers = try vkb.enumerateInstanceLayerPropertiesAlloc(allocator);
+    defer allocator.free(available_layers);
+
+    for (validation_layers) |layer_name| {
+        var layer_found = false;
+        for (available_layers) |available_layer| {
+            if (std.mem.eql(u8, std.mem.span(layer_name), std.mem.sliceTo(&available_layer.layer_name, 0))) {
+                layer_found = true;
+                break;
+            }
+        }
+        if (!layer_found) {
+            return false;
+        }
+    }
     return true;
 }
