@@ -25,6 +25,10 @@ const apis: []const vk.ApiInfo = &.{
     },
     // Or you can add entire feature sets or extensions
     vk.features.version_1_0,
+    vk.features.version_1_1,
+    vk.features.version_1_2,
+    vk.features.version_1_3,
+    vk.features.version_1_4,
     vk.extensions.khr_surface,
     vk.extensions.khr_swapchain,
     vk.extensions.ext_debug_utils,
@@ -52,6 +56,9 @@ pub const GraphicsContext = struct {
     props: vk.PhysicalDeviceProperties,
     mem_props: vk.PhysicalDeviceMemoryProperties,
 
+    debug_messenger: vk.DebugUtilsMessengerEXT = .null_handle,
+    extensions_list: std.ArrayList([*c]const u8),
+
     dev: Device,
     graphics_queue: Queue,
     present_queue: Queue,
@@ -66,8 +73,7 @@ pub const GraphicsContext = struct {
             return error.ValidationSupportNotFound;
         }
 
-        const extensions_list = try getRequiredExtensionListAlloc(allocator);
-        defer extensions_list.deinit();
+        self.extensions_list = try requiredExtensionListAlloc(allocator);
 
         const instance = try self.vkb.createInstance(&.{
             .p_application_info = &.{
@@ -77,8 +83,8 @@ pub const GraphicsContext = struct {
                 .engine_version = vk.makeApiVersion(0, 0, 0, 0),
                 .api_version = vk.API_VERSION_1_4,
             },
-            .enabled_extension_count = @intCast(extensions_list.items.len),
-            .pp_enabled_extension_names = @ptrCast(extensions_list.items),
+            .enabled_extension_count = @intCast(self.extensions_list.items.len),
+            .pp_enabled_extension_names = @ptrCast(self.extensions_list.items),
         }, null);
 
         const vki = try allocator.create(InstanceDispatch);
@@ -86,6 +92,34 @@ pub const GraphicsContext = struct {
         vki.* = try InstanceDispatch.load(instance, self.vkb.dispatch.vkGetInstanceProcAddr);
         self.instance = Instance.init(instance, vki);
         errdefer self.instance.destroyInstance(null);
+
+        if (enable_validation_layers) {
+            self.debug_messenger = try self.instance.createDebugUtilsMessengerEXT(&.{
+                .message_severity = .{
+                    .error_bit_ext = true,
+                    .warning_bit_ext = true,
+                },
+                .message_type = .{
+                    .general_bit_ext = true,
+                    .validation_bit_ext = true,
+                    .performance_bit_ext = true,
+                    .device_address_binding_bit_ext = true,
+                },
+                .pfn_user_callback = &debugCallback,
+            }, null);
+
+            const message: vk.DebugUtilsMessengerCallbackDataEXT = .{
+                .message_id_number = 1,
+                .p_message = "DebugUtilsMessageEXT enabled!!!!",
+            };
+
+            // check that callback is working
+            self.instance.submitDebugUtilsMessageEXT(
+                .{ .warning_bit_ext = true },
+                .{ .validation_bit_ext = true },
+                @ptrCast(&message),
+            );
+        }
 
         self.surface = try window.createVkSurface(self.instance.handle);
         errdefer self.instance.destroySurfaceKHR(self.surface, null);
@@ -111,6 +145,10 @@ pub const GraphicsContext = struct {
     }
 
     pub fn deinit(self: GraphicsContext) void {
+        self.extensions_list.deinit();
+        if (self.debug_messenger != .null_handle) {
+            self.instance.destroyDebugUtilsMessengerEXT(self.debug_messenger, null);
+        }
         self.dev.destroyDevice(null);
         self.instance.destroySurfaceKHR(self.surface, null);
         self.instance.destroyInstance(null);
@@ -332,8 +370,6 @@ fn getRequiredExtensionsAlloc(allocator: Allocator) !std.ArrayList([*c]const u8)
     const extensions = sdl.vk_get_instance_extensions(&extensions_count);
 
     var list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
-    defer list.deinit();
-
     try list.appendSlice(extensions[0..extensions_count]);
 
     if (enable_validation_layers) {
@@ -349,7 +385,7 @@ fn getRequiredExtensionsAlloc(allocator: Allocator) !std.ArrayList([*c]const u8)
     return list;
 }
 
-fn getRequiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
+fn requiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
     var extension_count: u32 = 0;
     const extensions = sdl.vk_get_instance_extensions(&extension_count);
     var list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
@@ -365,4 +401,22 @@ fn getRequiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const 
         std.debug.print("{s}\n", .{item});
     }
     return list;
+}
+
+fn debugCallback(
+    message_severity: vk.DebugUtilsMessageSeverityFlagsEXT,
+    message_types: vk.DebugUtilsMessageTypeFlagsEXT,
+    p_callback_data: ?*const vk.DebugUtilsMessengerCallbackDataEXT,
+    p_user_data: ?*anyopaque,
+) callconv(vk.vulkan_call_conv) vk.Bool32 {
+    _ = message_severity;
+    _ = message_types;
+    _ = p_user_data;
+    b: {
+        const msg = (p_callback_data orelse break :b).p_message orelse break :b;
+        std.log.scoped(.validation).warn("{s}", .{msg});
+        return vk.FALSE;
+    }
+    std.log.scoped(.validation).warn("unrecognized validation layer debug message", .{});
+    return vk.FALSE;
 }
