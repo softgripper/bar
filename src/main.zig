@@ -14,6 +14,9 @@ const frag_spv align(@alignOf(u32)) = @embedFile("fragment_shader").*;
 
 const app_name = "vulkan-zig triangle example";
 
+// enable debug log level
+pub const std_options: std.Options = .{ .log_level = .debug };
+
 const Vertex = struct {
     const binding_description = vk.VertexInputBindingDescription{
         .binding = 0,
