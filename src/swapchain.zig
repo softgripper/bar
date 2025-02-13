@@ -4,6 +4,8 @@ const GraphicsContext = @import("graphics_context.zig").GraphicsContext;
 const Allocator = std.mem.Allocator;
 
 pub const Swapchain = struct {
+    const Self = @This();
+
     pub const PresentState = enum {
         optimal,
         suboptimal,
@@ -21,11 +23,11 @@ pub const Swapchain = struct {
     image_index: u32,
     next_image_acquired: vk.Semaphore,
 
-    pub fn init(gc: *const GraphicsContext, allocator: Allocator, extent: vk.Extent2D) !Swapchain {
+    pub fn init(gc: *const GraphicsContext, allocator: Allocator, extent: vk.Extent2D) !Self {
         return try initRecycle(gc, allocator, extent, .null_handle);
     }
 
-    pub fn initRecycle(gc: *const GraphicsContext, allocator: Allocator, extent: vk.Extent2D, old_handle: vk.SwapchainKHR) !Swapchain {
+    pub fn initRecycle(gc: *const GraphicsContext, allocator: Allocator, extent: vk.Extent2D, old_handle: vk.SwapchainKHR) !Self {
         const caps = try gc.instance.getPhysicalDeviceSurfaceCapabilitiesKHR(gc.pdev, gc.surface);
         const actual_extent = findActualExtent(caps, extent);
         if (actual_extent.width == 0 or actual_extent.height == 0) {
@@ -85,7 +87,7 @@ pub const Swapchain = struct {
         }
 
         std.mem.swap(vk.Semaphore, &swap_images[result.image_index].image_acquired, &next_image_acquired);
-        return Swapchain{
+        return .{
             .gc = gc,
             .allocator = allocator,
             .surface_format = surface_format,
@@ -98,22 +100,22 @@ pub const Swapchain = struct {
         };
     }
 
-    fn deinitExceptSwapchain(self: Swapchain) void {
+    fn deinitExceptSwapchain(self: Self) void {
         for (self.swap_images) |si| si.deinit(self.gc);
         self.allocator.free(self.swap_images);
         self.gc.dev.destroySemaphore(self.next_image_acquired, null);
     }
 
-    pub fn waitForAllFences(self: Swapchain) !void {
+    pub fn waitForAllFences(self: Self) !void {
         for (self.swap_images) |si| si.waitForFence(self.gc) catch {};
     }
 
-    pub fn deinit(self: Swapchain) void {
+    pub fn deinit(self: Self) void {
         self.deinitExceptSwapchain();
         self.gc.dev.destroySwapchainKHR(self.handle, null);
     }
 
-    pub fn recreate(self: *Swapchain, new_extent: vk.Extent2D) !void {
+    pub fn recreate(self: *Self, new_extent: vk.Extent2D) !void {
         const gc = self.gc;
         const allocator = self.allocator;
         const old_handle = self.handle;
@@ -121,15 +123,15 @@ pub const Swapchain = struct {
         self.* = try initRecycle(gc, allocator, new_extent, old_handle);
     }
 
-    pub fn currentImage(self: Swapchain) vk.Image {
+    pub fn currentImage(self: Self) vk.Image {
         return self.swap_images[self.image_index].image;
     }
 
-    pub fn currentSwapImage(self: Swapchain) *const SwapImage {
+    pub fn currentSwapImage(self: Self) *const SwapImage {
         return &self.swap_images[self.image_index];
     }
 
-    pub fn present(self: *Swapchain, cmdbuf: vk.CommandBuffer) !PresentState {
+    pub fn present(self: *Self, cmdbuf: vk.CommandBuffer) !PresentState {
         // Simple method:
         // 1) Acquire next image
         // 2) Wait for and reset fence of the acquired image
@@ -193,13 +195,14 @@ pub const Swapchain = struct {
 };
 
 const SwapImage = struct {
+    const Self = @This();
     image: vk.Image,
     view: vk.ImageView,
     image_acquired: vk.Semaphore,
     render_finished: vk.Semaphore,
     frame_fence: vk.Fence,
 
-    fn init(gc: *const GraphicsContext, image: vk.Image, format: vk.Format) !SwapImage {
+    fn init(gc: *const GraphicsContext, image: vk.Image, format: vk.Format) !Self {
         const view = try gc.dev.createImageView(&.{
             .image = image,
             .view_type = .@"2d",
@@ -224,7 +227,7 @@ const SwapImage = struct {
         const frame_fence = try gc.dev.createFence(&.{ .flags = .{ .signaled_bit = true } }, null);
         errdefer gc.dev.destroyFence(frame_fence, null);
 
-        return SwapImage{
+        return .{
             .image = image,
             .view = view,
             .image_acquired = image_acquired,
@@ -233,7 +236,7 @@ const SwapImage = struct {
         };
     }
 
-    fn deinit(self: SwapImage, gc: *const GraphicsContext) void {
+    fn deinit(self: Self, gc: *const GraphicsContext) void {
         self.waitForFence(gc) catch return;
         gc.dev.destroyImageView(self.view, null);
         gc.dev.destroySemaphore(self.image_acquired, null);
@@ -241,7 +244,7 @@ const SwapImage = struct {
         gc.dev.destroyFence(self.frame_fence, null);
     }
 
-    fn waitForFence(self: SwapImage, gc: *const GraphicsContext) !void {
+    fn waitForFence(self: Self, gc: *const GraphicsContext) !void {
         _ = try gc.dev.waitForFences(1, @ptrCast(&self.frame_fence), vk.TRUE, std.math.maxInt(u64));
     }
 };
