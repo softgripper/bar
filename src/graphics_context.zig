@@ -98,6 +98,7 @@ pub const GraphicsContext = struct {
 
         if (enable_validation_layers) {
             self.debug_messenger = try initDebugUtilsMessengerEXT(self.instance, &debugCallback);
+            errdefer self.instance.destroyDebugUtilsMessengerEXT(self.debug_messenger, null);
         }
 
         self.surface = try window.createVkSurface(self.instance.handle);
