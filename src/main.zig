@@ -192,7 +192,8 @@ pub fn main() !void {
             );
         }
 
-        // sdl.delay;
+        // we don't want to go too nuts on the video card if we fuck up.
+        sdl.delay(3);
     }
 
     try swapchain.waitForAllFences();
