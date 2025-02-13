@@ -139,6 +139,7 @@ pub const Window = struct {
         }
 
         // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
+        log("Suspect we need to do something way more clever here with retries");
         std.Thread.sleep(1);
 
         return surface;
