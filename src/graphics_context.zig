@@ -44,6 +44,8 @@ const Instance = vk.InstanceProxy(apis);
 const Device = vk.DeviceProxy(apis);
 
 pub const GraphicsContext = struct {
+    const Self = @This();
+
     pub const CommandBuffer = vk.CommandBufferProxy(apis);
 
     allocator: Allocator,
@@ -63,8 +65,8 @@ pub const GraphicsContext = struct {
     graphics_queue: Queue,
     present_queue: Queue,
 
-    pub fn init(allocator: Allocator, app_name: [*:0]const u8, window: *const sdl.Window) !GraphicsContext {
-        var self: GraphicsContext = undefined;
+    pub fn init(allocator: Allocator, app_name: [*:0]const u8, window: *const sdl.Window) !Self {
+        var self: Self = undefined;
         self.allocator = allocator;
 
         self.vkb = try BaseDispatch.load(sdl.vk_proc_address());
@@ -73,7 +75,8 @@ pub const GraphicsContext = struct {
             return error.ValidationSupportNotFound;
         }
 
-        self.extensions_list = try requiredExtensionListAlloc(allocator);
+        const extensions_list = try requiredExtensionListAlloc(allocator);
+        defer extensions_list.deinit();
 
         const instance = try self.vkb.createInstance(&.{
             .p_application_info = &.{
@@ -83,8 +86,8 @@ pub const GraphicsContext = struct {
                 .engine_version = vk.makeApiVersion(0, 0, 0, 0),
                 .api_version = vk.API_VERSION_1_4,
             },
-            .enabled_extension_count = @intCast(self.extensions_list.items.len),
-            .pp_enabled_extension_names = @ptrCast(self.extensions_list.items),
+            .enabled_extension_count = @intCast(extensions_list.items.len),
+            .pp_enabled_extension_names = @ptrCast(extensions_list.items),
         }, null);
 
         const vki = try allocator.create(InstanceDispatch);
@@ -120,11 +123,11 @@ pub const GraphicsContext = struct {
         return self;
     }
 
-    pub fn deinit(self: GraphicsContext) void {
-        self.extensions_list.deinit();
+    pub fn deinit(self: Self) void {
         if (enable_validation_layers) {
             self.instance.destroyDebugUtilsMessengerEXT(self.debug_messenger, null);
         }
+
         self.dev.destroyDevice(null);
         self.instance.destroySurfaceKHR(self.surface, null);
         self.instance.destroyInstance(null);
@@ -134,11 +137,11 @@ pub const GraphicsContext = struct {
         self.allocator.destroy(self.instance.wrapper);
     }
 
-    pub fn deviceName(self: *const GraphicsContext) []const u8 {
+    pub fn deviceName(self: *const Self) []const u8 {
         return std.mem.sliceTo(&self.props.device_name, 0);
     }
 
-    pub fn findMemoryTypeIndex(self: GraphicsContext, memory_type_bits: u32, flags: vk.MemoryPropertyFlags) !u32 {
+    pub fn findMemoryTypeIndex(self: Self, memory_type_bits: u32, flags: vk.MemoryPropertyFlags) !u32 {
         for (self.mem_props.memory_types[0..self.mem_props.memory_type_count], 0..) |mem_type, i| {
             if (memory_type_bits & (@as(u32, 1) << @truncate(i)) != 0 and mem_type.property_flags.contains(flags)) {
                 return @truncate(i);
@@ -148,7 +151,7 @@ pub const GraphicsContext = struct {
         return error.NoSuitableMemoryType;
     }
 
-    pub fn allocate(self: GraphicsContext, requirements: vk.MemoryRequirements, flags: vk.MemoryPropertyFlags) !vk.DeviceMemory {
+    pub fn allocate(self: Self, requirements: vk.MemoryRequirements, flags: vk.MemoryPropertyFlags) !vk.DeviceMemory {
         return try self.dev.allocateMemory(&.{
             .allocation_size = requirements.size,
             .memory_type_index = try self.findMemoryTypeIndex(requirements.memory_type_bits, flags),
@@ -339,26 +342,6 @@ fn checkValidationLayerSupport(vkb: BaseDispatch, allocator: Allocator) !bool {
         }
     }
     return true;
-}
-
-fn getRequiredExtensionsAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
-    var extensions_count: u32 = 0;
-    const extensions = sdl.vk_get_instance_extensions(&extensions_count);
-
-    var list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
-    try list.appendSlice(extensions[0..extensions_count]);
-
-    if (enable_validation_layers) {
-        try list.append(vk.extensions.ext_debug_utils.name);
-        extensions_count = @intCast(list.items.len);
-    }
-
-    std.debug.print("Extensions: {d}\n", .{extensions_count});
-    for (list.items) |item| {
-        std.debug.print("{s}\n", .{item});
-    }
-
-    return list;
 }
 
 fn requiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
