@@ -86,8 +86,10 @@ pub const GraphicsContext = struct {
                 .engine_version = vk.makeApiVersion(0, 0, 0, 0),
                 .api_version = vk.API_VERSION_1_4,
             },
+            .enabled_layer_count = validation_layers.len,
+            .pp_enabled_layer_names = @ptrCast(&validation_layers),
             .enabled_extension_count = @intCast(extensions_list.items.len),
-            .pp_enabled_extension_names = @ptrCast(extensions_list.items),
+            .pp_enabled_extension_names = extensions_list.items.ptr,
         }, null);
 
         const vki = try allocator.create(InstanceDispatch);
@@ -171,16 +173,6 @@ pub const Queue = struct {
         };
     }
 };
-
-fn createSurface(instance: Instance, window: *const sdl.Window) !vk.SurfaceKHR {
-    var surface: vk.SurfaceKHR = undefined;
-    if (!sdl.vk_create_surface(window.handle, instance.handle, null, &surface)) {
-        sdl.log("Unable to create surface");
-        return error.SurfaceInitFailed;
-    }
-
-    return surface;
-}
 
 fn initializeCandidate(instance: Instance, candidate: DeviceCandidate) !vk.Device {
     const priority = [_]f32{1};
@@ -345,12 +337,12 @@ fn checkValidationLayerSupport(vkb: BaseDispatch, allocator: Allocator) !bool {
     return true;
 }
 
-fn requiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const u8) {
+fn requiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*:0]const u8) {
     var extension_count: u32 = 0;
     const extensions = sdl.vk_get_instance_extensions(&extension_count);
-    var list = std.ArrayList(@TypeOf(extensions[0])).init(allocator);
+    var list = std.ArrayList([*:0]const u8).init(allocator);
 
-    try list.appendSlice(extensions[0..extension_count]);
+    try list.appendSlice(@ptrCast(extensions[0..extension_count]));
     try list.append(vk.extensions.ext_debug_utils.name);
 
     std.debug.print("Extensions: {d}\n", .{list.items.len});
