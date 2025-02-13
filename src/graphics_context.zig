@@ -7,7 +7,7 @@ const required_device_extensions = [_][*:0]const u8{
     vk.extensions.khr_swapchain.name,
 };
 
-const enable_validation_layers = true;
+const enable_validation_layers = false;
 const validation_layers = [_][*:0]const u8{
     "VK_LAYER_KHRONOS_validation",
 };
@@ -94,31 +94,7 @@ pub const GraphicsContext = struct {
         errdefer self.instance.destroyInstance(null);
 
         if (enable_validation_layers) {
-            self.debug_messenger = try self.instance.createDebugUtilsMessengerEXT(&.{
-                .message_severity = .{
-                    .error_bit_ext = true,
-                    .warning_bit_ext = true,
-                },
-                .message_type = .{
-                    .general_bit_ext = true,
-                    .validation_bit_ext = true,
-                    .performance_bit_ext = true,
-                    .device_address_binding_bit_ext = true,
-                },
-                .pfn_user_callback = &debugCallback,
-            }, null);
-
-            const message: vk.DebugUtilsMessengerCallbackDataEXT = .{
-                .message_id_number = 1,
-                .p_message = "DebugUtilsMessageEXT enabled!!!!",
-            };
-
-            // check that callback is working
-            self.instance.submitDebugUtilsMessageEXT(
-                .{ .warning_bit_ext = true },
-                .{ .validation_bit_ext = true },
-                @ptrCast(&message),
-            );
+            self.debug_messenger = try initDebugUtilsMessengerEXT(self.instance);
         }
 
         self.surface = try window.createVkSurface(self.instance.handle);
@@ -146,7 +122,7 @@ pub const GraphicsContext = struct {
 
     pub fn deinit(self: GraphicsContext) void {
         self.extensions_list.deinit();
-        if (self.debug_messenger != .null_handle) {
+        if (enable_validation_layers) {
             self.instance.destroyDebugUtilsMessengerEXT(self.debug_messenger, null);
         }
         self.dev.destroyDevice(null);
@@ -392,9 +368,11 @@ fn requiredExtensionListAlloc(allocator: Allocator) !std.ArrayList([*c]const u8)
 
     try list.appendSlice(extensions[0..extension_count]);
 
-    if (enable_validation_layers) {
-        try list.append(vk.extensions.ext_debug_utils.name);
-    }
+    // if (enable_validation_layers) {
+    //     try list.append(vk.extensions.ext_debug_utils.name);
+    // }
+
+    try list.append(vk.extensions.ext_debug_utils.name);
 
     std.debug.print("Extensions: {d}\n", .{list.items.len});
     for (list.items) |item| {
@@ -419,4 +397,32 @@ fn debugCallback(
     }
     std.log.scoped(.validation).warn("unrecognized validation layer debug message", .{});
     return vk.FALSE;
+}
+
+fn initDebugUtilsMessengerEXT(instance: Instance) !vk.DebugUtilsMessengerEXT {
+    const debug_messenger = try instance.createDebugUtilsMessengerEXT(&.{
+        .message_severity = .{
+            .error_bit_ext = true,
+            .warning_bit_ext = true,
+        },
+        .message_type = .{
+            .general_bit_ext = true,
+            .validation_bit_ext = true,
+            .performance_bit_ext = true,
+            .device_address_binding_bit_ext = true,
+        },
+        .pfn_user_callback = &debugCallback,
+    }, null);
+
+    // check that callback is working
+    instance.submitDebugUtilsMessageEXT(
+        .{ .warning_bit_ext = true },
+        .{ .validation_bit_ext = true },
+        &.{
+            .message_id_number = 0,
+            .p_message = "DebugUtilsMessageEXT initialized!!!!",
+        },
+    );
+
+    return debug_messenger;
 }
