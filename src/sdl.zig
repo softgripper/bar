@@ -101,24 +101,25 @@ pub fn createWindow(args: *const CreateWindowArgs) SdlError!Window {
 }
 
 pub const Window = struct {
+    const Self = @This();
     handle: *c.SDL_Window,
 
-    pub fn destroy(self: *const Window) void {
+    pub fn deinit(self: *const Self) void {
         c.SDL_DestroyWindow(self.handle);
     }
 
-    pub fn show(self: *const Window) SdlError!void {
+    pub fn show(self: *const Self) SdlError!void {
         if (!c.SDL_ShowWindow(self.handle)) {
             log("Unable to show window");
             return SdlError.ShowWindow;
         }
     }
 
-    pub fn hasFlag(self: *const Window, flag: WindowFlag) bool {
+    pub fn hasFlag(self: *const Self, flag: WindowFlag) bool {
         return (c.SDL_GetWindowFlags(self.handle) & @intFromEnum(flag) != 0);
     }
 
-    pub fn size(self: *const Window) struct {
+    pub fn size(self: *const Self) struct {
         w: c_int,
         h: c_int,
     } {
@@ -131,7 +132,7 @@ pub const Window = struct {
         };
     }
 
-    pub fn createVkSurface(self: *const Window, instance: vk.Instance) SdlError!vk.SurfaceKHR {
+    pub fn createVkSurface(self: *const Self, instance: vk.Instance) SdlError!vk.SurfaceKHR {
         var surface: vk.SurfaceKHR = undefined;
         if (!SDL_Vulkan_CreateSurface(self.handle, instance, null, &surface)) {
             log("Unable to create surface");
@@ -139,7 +140,7 @@ pub const Window = struct {
         }
 
         // sleep for a nanosecond which seems to "fix" the surface creation in an optimized release (wtf)
-        log("Suspect we need to do something way more clever here with retries");
+        // suspect we need to do something way more clever here with retries or actually understand wtf the problem is.
         std.Thread.sleep(1);
 
         return surface;

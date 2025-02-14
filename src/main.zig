@@ -74,7 +74,7 @@ pub fn main() !void {
         .title = app_name,
         .flags = &[_]sdl.WindowFlag{ .hidden, .resizeable, .vulkan },
     });
-    defer window.destroy();
+    defer window.deinit();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) {
